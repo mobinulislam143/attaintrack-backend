@@ -1,7 +1,4 @@
-# Development and local files
-.env
-.env.*
-!.env.example
+# Dependencies (installed by Vercel automatically)
 node_modules
 
 # Build output (Vercel builds from source)
