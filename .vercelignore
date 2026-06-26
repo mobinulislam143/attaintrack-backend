@@ -1,0 +1,21 @@
+# Development and local files
+.env
+.env.*
+!.env.example
+node_modules
+
+# Build output (Vercel builds from source)
+dist
+
+# Local dev tools
+nodemon.json
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# Documentation (not needed at runtime)
+docs/
+CHANGELOG.md
+
+# Prisma generated client (regenerated during postinstall)
+src/generated/

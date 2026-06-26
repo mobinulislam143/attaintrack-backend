@@ -1,0 +1,120 @@
+<svg viewBox="0 0 860 640" xmlns="http://www.w3.org/2000/svg" role="img" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+  <title>Enterprise Backend Architecture</title>
+  <desc>Request flow from Client through middleware, guards, router, controllers, services to MongoDB</desc>
+
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#475569"/>
+    </marker>
+  </defs>
+
+  <!-- bg -->
+  <rect width="860" height="640" fill="#0f172a" rx="14"/>
+
+  <!-- Title -->
+  <text x="430" y="36" fill="#f1f5f9" font-size="15" font-weight="700" text-anchor="middle" letter-spacing="0.3">Enterprise Backend — Request Lifecycle</text>
+
+  <!-- CLIENT -->
+  <rect x="310" y="56" width="240" height="42" rx="7" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="430" y="74" fill="#93c5fd" font-size="12" font-weight="700" text-anchor="middle">Client</text>
+  <text x="430" y="89" fill="#475569" font-size="10" text-anchor="middle">Browser · Mobile · API consumer</text>
+
+  <line x1="430" y1="98" x2="430" y2="118" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- MIDDLEWARE -->
+  <rect x="110" y="122" width="640" height="58" rx="7" fill="#1e293b" stroke="#8b5cf6" stroke-width="1.5"/>
+  <text x="430" y="143" fill="#c4b5fd" font-size="12" font-weight="700" text-anchor="middle">Middleware Stack</text>
+  <rect x="130" y="150" width="72" height="20" rx="4" fill="#2d1d5e"/>
+  <text x="166" y="164" fill="#a78bfa" font-size="10" text-anchor="middle">Helmet</text>
+  <rect x="212" y="150" width="72" height="20" rx="4" fill="#2d1d5e"/>
+  <text x="248" y="164" fill="#a78bfa" font-size="10" text-anchor="middle">CORS</text>
+  <rect x="294" y="150" width="72" height="20" rx="4" fill="#2d1d5e"/>
+  <text x="330" y="164" fill="#a78bfa" font-size="10" text-anchor="middle">Morgan</text>
+  <rect x="376" y="150" width="88" height="20" rx="4" fill="#2d1d5e"/>
+  <text x="420" y="164" fill="#a78bfa" font-size="10" text-anchor="middle">JSON Body</text>
+  <rect x="474" y="150" width="96" height="20" rx="4" fill="#2d1d5e"/>
+  <text x="522" y="164" fill="#a78bfa" font-size="10" text-anchor="middle">Rate Limiter</text>
+
+  <line x1="430" y1="180" x2="430" y2="200" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- AUTH GUARDS -->
+  <rect x="190" y="204" width="480" height="48" rx="7" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="430" y="224" fill="#fcd34d" font-size="12" font-weight="700" text-anchor="middle">Auth Guards</text>
+  <rect x="210" y="230" width="116" height="16" rx="4" fill="#3b2700"/>
+  <text x="268" y="242" fill="#fbbf24" font-size="10" text-anchor="middle">requireAuth (JWT)</text>
+  <rect x="338" y="230" width="116" height="16" rx="4" fill="#3b2700"/>
+  <text x="396" y="242" fill="#fbbf24" font-size="10" text-anchor="middle">requireRole()</text>
+  <rect x="466" y="230" width="136" height="16" rx="4" fill="#3b2700"/>
+  <text x="534" y="242" fill="#fbbf24" font-size="10" text-anchor="middle">requirePermission()</text>
+
+  <line x1="430" y1="252" x2="430" y2="272" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- ROUTER -->
+  <rect x="60" y="276" width="740" height="56" rx="7" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+  <text x="430" y="296" fill="#6ee7b7" font-size="12" font-weight="700" text-anchor="middle">Route Registry  /api/v1</text>
+  <rect x="80" y="303" width="80" height="20" rx="4" fill="#052e16"/>
+  <text x="120" y="317" fill="#4ade80" font-size="10" text-anchor="middle">/health</text>
+  <rect x="172" y="303" width="80" height="20" rx="4" fill="#052e16"/>
+  <text x="212" y="317" fill="#4ade80" font-size="10" text-anchor="middle">/auth</text>
+  <rect x="264" y="303" width="80" height="20" rx="4" fill="#052e16"/>
+  <text x="304" y="317" fill="#4ade80" font-size="10" text-anchor="middle">/users</text>
+  <rect x="356" y="303" width="80" height="20" rx="4" fill="#052e16"/>
+  <text x="396" y="317" fill="#4ade80" font-size="10" text-anchor="middle">/roles</text>
+  <rect x="448" y="303" width="110" height="20" rx="4" fill="#052e16"/>
+  <text x="503" y="317" fill="#4ade80" font-size="10" text-anchor="middle">/permissions</text>
+  <rect x="570" y="303" width="110" height="20" rx="4" fill="#0f2a1a" stroke="#1a4731" stroke-width="1" stroke-dasharray="3,2"/>
+  <text x="625" y="317" fill="#34d399" font-size="10" text-anchor="middle">+ your modules</text>
+
+  <line x1="430" y1="332" x2="430" y2="352" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- CONTROLLER -->
+  <rect x="190" y="356" width="480" height="56" rx="7" fill="#1e293b" stroke="#06b6d4" stroke-width="1.5"/>
+  <text x="430" y="376" fill="#67e8f9" font-size="12" font-weight="700" text-anchor="middle">Controllers  (thin)</text>
+  <text x="430" y="396" fill="#64748b" font-size="11" text-anchor="middle">Validate  →  Extract  →  Call Service  →  sendSuccess()</text>
+
+  <line x1="430" y1="412" x2="430" y2="432" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- SERVICES -->
+  <rect x="190" y="436" width="480" height="56" rx="7" fill="#1e293b" stroke="#f43f5e" stroke-width="1.5"/>
+  <text x="430" y="456" fill="#fda4af" font-size="12" font-weight="700" text-anchor="middle">Services  (business logic)</text>
+  <rect x="210" y="463" width="76" height="18" rx="4" fill="#3b0a14"/>
+  <text x="248" y="476" fill="#fda4af" font-size="10" text-anchor="middle">Auth</text>
+  <rect x="298" y="463" width="76" height="18" rx="4" fill="#3b0a14"/>
+  <text x="336" y="476" fill="#fda4af" font-size="10" text-anchor="middle">Users</text>
+  <rect x="386" y="463" width="76" height="18" rx="4" fill="#3b0a14"/>
+  <text x="424" y="476" fill="#fda4af" font-size="10" text-anchor="middle">Roles</text>
+  <rect x="474" y="463" width="76" height="18" rx="4" fill="#3b0a14"/>
+  <text x="512" y="476" fill="#fda4af" font-size="10" text-anchor="middle">Email</text>
+
+  <line x1="430" y1="492" x2="430" y2="512" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- DATABASE -->
+  <rect x="190" y="516" width="480" height="50" rx="7" fill="#1e293b" stroke="#84cc16" stroke-width="1.5"/>
+  <text x="430" y="537" fill="#bef264" font-size="12" font-weight="700" text-anchor="middle">Prisma ORM  →  MongoDB Atlas</text>
+  <text x="430" y="553" fill="#4b5563" font-size="10" text-anchor="middle">users · roles · permissions · user_roles · role_permissions · refresh_tokens</text>
+
+  <!-- ERROR PATH (side) -->
+  <rect x="686" y="356" width="134" height="74" rx="7" fill="#1e293b" stroke="#ef4444" stroke-width="1.2" stroke-dasharray="4,2"/>
+  <text x="753" y="376" fill="#fca5a5" font-size="11" font-weight="700" text-anchor="middle">Error Path</text>
+  <text x="753" y="393" fill="#64748b" font-size="10" text-anchor="middle">AppError thrown</text>
+  <text x="753" y="408" fill="#64748b" font-size="10" text-anchor="middle">asyncHandler</text>
+  <text x="753" y="423" fill="#64748b" font-size="10" text-anchor="middle">→ next(err)</text>
+  <path d="M 820,430 Q 850,500 680,500" stroke="#ef4444" stroke-width="1.2" fill="none" stroke-dasharray="3,2" marker-end="url(#arr)"/>
+  <text x="830" y="480" fill="#ef4444" font-size="9" text-anchor="middle">error</text>
+  <text x="830" y="491" fill="#ef4444" font-size="9" text-anchor="middle">middleware</text>
+
+  <!-- TOKEN LEGEND -->
+  <rect x="60" y="580" width="460" height="46" rx="7" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="80" y="596" fill="#475569" font-size="10" font-weight="600">TOKEN STRATEGY</text>
+  <rect x="80" y="602" width="8" height="8" rx="2" fill="#3b82f6"/>
+  <text x="94" y="610" fill="#64748b" font-size="10">Access Token  15m  · stateless JWT · no DB lookup per request</text>
+  <rect x="80" y="614" width="8" height="8" rx="2" fill="#10b981"/>
+  <text x="94" y="622" fill="#64748b" font-size="10">Refresh Token  7d  · stored in DB · rotated on every use · revocable</text>
+
+  <!-- PASSWORD LEGEND -->
+  <rect x="536" y="580" width="264" height="46" rx="7" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="556" y="596" fill="#475569" font-size="10" font-weight="600">PASSWORD SECURITY</text>
+  <text x="556" y="610" fill="#64748b" font-size="10">scrypt · 32-byte salt · 64-byte key</text>
+  <text x="556" y="622" fill="#64748b" font-size="10">timingSafeEqual · no bcrypt dependency</text>
+
+</svg>

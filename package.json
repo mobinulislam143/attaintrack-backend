@@ -1,0 +1,47 @@
+{
+  "name": "enterprise-backend-boilerplate",
+  "version": "1.0.0",
+  "description": "Production-ready Express + TypeScript + Prisma backend boilerplate with JWT auth, RBAC, and MongoDB",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "nodemon",
+    "build": "tsc --project tsconfig.json",
+    "start": "node dist/server.js",
+    "postinstall": "prisma generate",
+    "prisma:generate": "npx prisma generate",
+    "prisma:studio": "npx prisma studio",
+    "prisma:seed": "ts-node prisma/seed.ts",
+    "lint": "tsc --noEmit"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
+  "dependencies": {
+    "@clerk/express": "^1.3.0",
+    "@prisma/client": "^6.19.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "helmet": "^8.0.0",
+    "json2csv": "^5.0.7",
+    "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.11.0",
+    "nodemailer": "^6.9.16",
+    "openai": "^4.67.3",
+    "svix": "^1.39.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/json2csv": "^5.0.7",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^25.5.2",
+    "@types/nodemailer": "^8.0.0",
+    "nodemon": "^3.1.14",
+    "prisma": "^6.19.3",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.7.0"
+  }
+}
