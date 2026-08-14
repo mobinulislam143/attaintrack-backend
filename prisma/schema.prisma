@@ -27,6 +27,15 @@ model User {
   passwordResetExpiry DateTime?
   refreshTokens       RefreshToken[]
   userRoles           UserRole[]
+
+  // ── OBE back-references ───────────────────────────────────────────────────
+  /// Courses this user teaches. Populated for accounts holding the `teacher` role.
+  coursesTaught       Course[]       @relation("CourseTeacher")
+  /// The roster record this login belongs to, for accounts holding `student`.
+  /// Modelled as a list because `Student.userId` cannot carry a unique index
+  /// (see the note there); at most one row is ever present.
+  studentRecord       Student[]      @relation("StudentAccount")
+
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
 
@@ -107,4 +116,345 @@ model RefreshToken {
   createdAt DateTime @default(now())
 
   @@map("refresh_tokens")
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// OBE domain
+//
+// The whole system serves one value chain, and the models below are ordered
+// along it:
+//
+//   Department → Program → Program Outcome
+//                       ↘ Course → Course Outcome → CO-PO Mapping
+//                                ↘ Assessment → Question → Mark
+//                                             ↘ Enrollment → Student
+//                                → AttainmentRun → Report
+//
+// Status and type fields are plain strings rather than Prisma enums so the
+// exact vocabulary in the design system (`setup-incomplete`, `below-target`)
+// survives round-tripping to the client verbatim. `src/common/vocabulary.ts`
+// is the single authority on the allowed members.
+// ═════════════════════════════════════════════════════════════════════════════
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Academic structure (admin-owned)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Department {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  code      String    @unique
+  programs  Program[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("departments")
+}
+
+model Program {
+  id           String           @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  code         String           @unique
+  /// e.g. "BSc", "MSc" — free text, institutions differ.
+  degree       String           @default("BSc")
+  department   Department       @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  departmentId String           @db.ObjectId
+  outcomes     ProgramOutcome[]
+  courses      Course[]
+  students     Student[]
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([departmentId])
+  @@map("programs")
+}
+
+/// A Program Outcome (PO). Editable only by admin — the teacher maps to them
+/// but never authors them.
+model ProgramOutcome {
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  /// Canonical form, e.g. "PO1".
+  code        String
+  title       String
+  description String        @default("")
+  /// Attainment target as a percentage, e.g. 70.
+  target      Float         @default(70)
+  order       Int           @default(0)
+  program     Program       @relation(fields: [programId], references: [id], onDelete: Cascade)
+  programId   String        @db.ObjectId
+  mappings    COPOMapping[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([programId, code])
+  @@index([programId])
+  @@map("program_outcomes")
+}
+
+/// An academic term, e.g. "Spring 2026". Exactly one session is active.
+model AcademicSession {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String   @unique
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean  @default(false)
+  courses   Course[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("academic_sessions")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Course and outcomes
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Course {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  code      String
+  title     String
+  credit    Float  @default(3)
+  section   String @default("A")
+
+  /// One of the six members of `COURSE_STATUSES`. Advanced by the workflow,
+  /// never set arbitrarily by a client.
+  status    String @default("setup-incomplete")
+
+  /// A student "attains" a CO when they score at or above this percentage on
+  /// the questions mapped to it.
+  attainmentThreshold Float @default(60)
+  /// A CO is "achieved" when at least this percentage of students attained it.
+  attainmentTarget    Float @default(70)
+
+  program     Program         @relation(fields: [programId], references: [id], onDelete: Cascade)
+  programId   String          @db.ObjectId
+  session     AcademicSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId   String          @db.ObjectId
+  teacher     User?           @relation("CourseTeacher", fields: [teacherId], references: [id], onDelete: SetNull)
+  teacherId   String?         @db.ObjectId
+
+  outcomes       CourseOutcome[]
+  assessments    Assessment[]
+  enrollments    Enrollment[]
+  attainmentRuns AttainmentRun[]
+  reports        Report[]
+  marksUploads   MarksUpload[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([code, section, sessionId])
+  @@index([teacherId])
+  @@index([programId])
+  @@index([sessionId])
+  @@map("courses")
+}
+
+model CourseOutcome {
+  id        String        @id @default(auto()) @map("_id") @db.ObjectId
+  /// Canonical form, e.g. "CO1".
+  code      String
+  statement String
+  /// Percentage of students that must attain this CO for it to count achieved.
+  target    Float         @default(70)
+  order     Int           @default(0)
+  course    Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId  String        @db.ObjectId
+  mappings  COPOMapping[]
+  questions Question[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@unique([courseId, code])
+  @@index([courseId])
+  @@map("course_outcomes")
+}
+
+/// One cell of the CO-PO matrix. Rows with strength 0 are deleted rather than
+/// stored, so the presence of a row always means "mapped".
+model COPOMapping {
+  id               String         @id @default(auto()) @map("_id") @db.ObjectId
+  courseOutcome    CourseOutcome  @relation(fields: [courseOutcomeId], references: [id], onDelete: Cascade)
+  courseOutcomeId  String         @db.ObjectId
+  programOutcome   ProgramOutcome @relation(fields: [programOutcomeId], references: [id], onDelete: Cascade)
+  programOutcomeId String         @db.ObjectId
+  /// 1 low · 2 medium · 3 high. Never 0 — see the note above.
+  strength         Int
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([courseOutcomeId, programOutcomeId])
+  @@index([courseOutcomeId])
+  @@index([programOutcomeId])
+  @@map("co_po_mappings")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Assessment
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Assessment {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  /// One of `ASSESSMENT_TYPES`.
+  type        String     @default("quiz")
+  totalMarks  Float      @default(0)
+  /// Contribution to the course, in percent. All assessments should sum to 100.
+  weight      Float      @default(0)
+  conductedOn DateTime?
+  /// Students only see their marks once the assessment is published.
+  isPublished Boolean    @default(false)
+  course      Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId    String     @db.ObjectId
+  questions   Question[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([courseId])
+  @@map("assessments")
+}
+
+model Question {
+  id              String         @id @default(auto()) @map("_id") @db.ObjectId
+  /// Canonical form, e.g. "Q1", "Q2a".
+  code            String
+  maxMarks        Float
+  order           Int            @default(0)
+  assessment      Assessment     @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  assessmentId    String         @db.ObjectId
+  /// Null until the teacher maps the question to a Course Outcome. Unmapped
+  /// questions contribute to the total but never to attainment.
+  courseOutcome   CourseOutcome? @relation(fields: [courseOutcomeId], references: [id], onDelete: SetNull)
+  courseOutcomeId String?        @db.ObjectId
+  marks           Mark[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([assessmentId, code])
+  @@index([assessmentId])
+  @@index([courseOutcomeId])
+  @@map("questions")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Students and marks
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Student {
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  /// The registration number printed on the roll sheet, e.g. "202322".
+  /// This is what CSV imports match on — not the Mongo id.
+  studentId   String       @unique
+  name        String
+  email       String?
+  program     Program?     @relation(fields: [programId], references: [id], onDelete: SetNull)
+  programId   String?      @db.ObjectId
+  /// Set when the student has a login. Null for roster-only records, which is
+  /// the common case — most of a roster never signs in.
+  ///
+  /// Deliberately NOT `@unique`: MongoDB indexes a missing field as null, so a
+  /// unique index here would let only one roster-only student exist. The
+  /// one-account-one-roster-row rule is enforced in `studentsService` instead.
+  user        User?        @relation("StudentAccount", fields: [userId], references: [id], onDelete: SetNull)
+  userId      String?      @db.ObjectId
+  enrollments Enrollment[]
+  marks       Mark[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([programId])
+  @@map("students")
+}
+
+model Enrollment {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId  String   @db.ObjectId
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId String   @db.ObjectId
+  createdAt DateTime @default(now())
+
+  @@unique([courseId, studentId])
+  @@index([courseId])
+  @@index([studentId])
+  @@map("enrollments")
+}
+
+model Mark {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId String   @db.ObjectId
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId  String   @db.ObjectId
+  /// Null means "not attempted / not yet entered" — distinct from a zero,
+  /// which is a real score. The attainment engine treats them differently.
+  obtained   Float?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([questionId, studentId])
+  @@index([questionId])
+  @@index([studentId])
+  @@map("marks")
+}
+
+/// A CSV upload that has been parsed and validated but not yet committed.
+/// Held server-side so the client only ever passes back an opaque token.
+model MarksUpload {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  token        String   @unique
+  course       Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId     String   @db.ObjectId
+  assessmentId String   @db.ObjectId
+  fileName     String
+  uploadedById String   @db.ObjectId
+  /// The validated rows, ready to write on commit.
+  payload      Json
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([courseId])
+  @@map("marks_uploads")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Attainment and reporting
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// One execution of the attainment calculation, kept as an immutable record so
+/// a report always cites the numbers it was generated from.
+model AttainmentRun {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  course       Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId     String   @db.ObjectId
+  method       String   @default("threshold")
+  /// Snapshot of the course settings at calculation time.
+  threshold    Float
+  target       Float
+  overallCO    Float
+  overallPO    Float
+  /// COAttainmentResult[] / POAttainmentResult[] / GapEntry[] — shapes mirror
+  /// obe-frontend/src/types/api.ts exactly.
+  co           Json
+  po           Json
+  gaps         Json
+  calculatedAt DateTime @default(now())
+  reports      Report[]
+
+  @@index([courseId])
+  @@map("attainment_runs")
+}
+
+model Report {
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  course        Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId      String        @db.ObjectId
+  run           AttainmentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  runId         String        @db.ObjectId
+  config        Json
+  generatedById String        @db.ObjectId
+  generatedAt   DateTime      @default(now())
+
+  @@index([courseId])
+  @@map("reports")
 }

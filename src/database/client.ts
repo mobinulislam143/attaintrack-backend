@@ -12,10 +12,15 @@ declare global {
   var __prisma: PrismaClient | undefined;
 }
 
+// Query logging is opt-in rather than on-by-default in dev: a single page load
+// in this app issues dozens of queries and the noise buries the request log.
+// Set PRISMA_LOG_QUERIES=true when you actually want to read them.
+const logQueries = process.env['PRISMA_LOG_QUERIES'] === 'true';
+
 export const prisma: PrismaClient =
   global.__prisma ??
   new PrismaClient({
-    log: env.isDev ? ['query', 'warn', 'error'] : ['warn', 'error'],
+    log: logQueries && env.isDev ? ['query', 'warn', 'error'] : ['warn', 'error'],
   });
 
 // Always store — prevents multiple PrismaClient instances in serverless (Vercel/Lambda)

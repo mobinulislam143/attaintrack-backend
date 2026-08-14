@@ -42,13 +42,23 @@ export function parsePagination(req: Request): PaginationParams {
  * Accepts `?sortBy=createdAt&sortOrder=desc`.
  *
  * @param allowedFields  Whitelist of sortable fields. Defaults to `['createdAt']`.
+ * @param defaults       Fallback used when the client sends nothing. Reference
+ *                       tables (departments, programs) want name ascending;
+ *                       activity feeds want createdAt descending. Newest-first
+ *                       is a poor default for a lookup list nobody scrolls.
  */
-export function parseSort(req: Request, allowedFields: string[] = ['createdAt']): SortParams {
-  const field = String(req.query['sortBy'] ?? 'createdAt');
-  const safeField = allowedFields.includes(field) ? field : 'createdAt';
-  const rawOrder = String(req.query['sortOrder'] ?? 'desc').toLowerCase();
-  const order = rawOrder === 'asc' ? 'asc' : 'desc';
-  return { field: safeField, order };
+export function parseSort(
+  req: Request,
+  allowedFields: string[] = ['createdAt'],
+  defaults: SortParams = { field: 'createdAt', order: 'desc' },
+): SortParams {
+  const requested = req.query['sortBy'] ? String(req.query['sortBy']) : null;
+  const field = requested && allowedFields.includes(requested) ? requested : defaults.field;
+
+  const rawOrder = req.query['sortOrder'] ? String(req.query['sortOrder']).toLowerCase() : null;
+  const order = rawOrder === 'asc' ? 'asc' : rawOrder === 'desc' ? 'desc' : defaults.order;
+
+  return { field, order };
 }
 
 /**
